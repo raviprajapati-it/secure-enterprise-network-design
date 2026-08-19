@@ -1,0 +1,158 @@
+CASE STUDY 2 — SECURITY CONTROL EVIDENCE
+Secure Data Center Network Redesign
+
+This file preserves the security-control examples and implementation details
+documented in the original CT5047-002 project.
+
+These excerpts should be treated as project evidence rather than a complete
+device configuration.
+
+============================================================
+1. ACCESS CONTROL LIST EXAMPLE
+============================================================
+
+The Finance VLAN was restricted from accessing the Web Server over HTTP.
+
+Original documented ACL:
+
+access-list 110 deny tcp 192.168.30.0 0.0.0.255 host 192.168.50.20 eq 80
+access-list 110 permit ip any any
+
+Policy intent:
+
+- Source network:
+  192.168.30.0/24 — Finance VLAN
+
+- Restricted destination:
+  192.168.50.20 — Web Server
+
+- Restricted service:
+  TCP/80 — HTTP
+
+- Remaining IP traffic:
+  Permitted by the subsequent rule
+
+This demonstrates department-specific traffic filtering rather than unrestricted
+inter-VLAN access.
+
+============================================================
+2. DOCUMENTED DEPARTMENTAL ACCESS POLICY
+============================================================
+
+The original project defined security policies including:
+
+IT VLAN
+- Broad administrative access across internal services and devices
+- Intended for system administration and network maintenance
+
+Admin VLAN
+- Access to required internal services such as DHCP and file storage
+- Restricted from unnecessary management interfaces and services
+
+Finance VLAN
+- Blocked from HTTP access to the Web Server
+- Permitted access to the internal File Server
+
+HR VLAN
+- Restricted according to business-role requirements
+- Limited to required FTP and web services
+
+These controls were intended to support a least-privilege network design.
+
+============================================================
+3. ASA FIREWALL SECURITY ROLE
+============================================================
+
+A Cisco ASA firewall was used as the security gateway between the internal
+enterprise network and untrusted external connectivity.
+
+The documented firewall functions included:
+
+- NAT and PAT for outbound connectivity
+- Concealment of internal addressing
+- Inbound traffic filtering
+- Default blocking of unsolicited incoming traffic
+- Explicit permission for required protocols
+- Perimeter protection for internal servers
+- Logging of suspicious or denied activity
+
+The project documentation states that required services included examples such as:
+
+- ICMP
+- FTP
+- HTTP
+
+The firewall design was intended to prevent direct unrestricted access from
+external networks to internal resources.
+
+============================================================
+4. SECURE REMOTE MANAGEMENT
+============================================================
+
+SSH was implemented on routers and multilayer switches to replace insecure
+plaintext remote-management methods such as Telnet.
+
+The documented SSH controls included:
+
+- Device domain configuration
+- RSA key-pair generation
+- Local user accounts
+- VTY-line remote access
+- Restriction of management access to the IT VLAN
+- Source filtering using an access-class
+
+Only authorized systems within the IT VLAN were intended to be able to establish
+administrative SSH sessions.
+
+This design protects management traffic through encrypted remote access and
+limits the management plane to an approved source network.
+
+============================================================
+5. VALIDATION APPROACH
+============================================================
+
+The original Packet Tracer implementation included validation of the security
+policies.
+
+Documented testing included:
+
+Connectivity Tests
+- Hosts were tested against their local gateways
+- Approved intra-VLAN and inter-VLAN communication was verified
+
+ACL Testing
+- Permitted and restricted traffic flows were tested
+- Finance VLAN hosts were tested to verify that they could not access the
+  Web Server while retaining permitted access to the File Server
+
+DHCP Validation
+- Endpoints were checked for addresses from their assigned VLAN-specific scopes
+- The design expected correct dynamic addressing without IP conflicts
+
+Firewall Testing
+- NAT behavior was tested using simulated outbound web and file access
+- Required protocols were expected to be permitted
+- Unauthorized inbound traffic was expected to be denied
+
+SSH Testing
+- Remote management was tested from authorized IT VLAN clients
+- Management attempts from unauthorized VLANs were expected to fail
+
+============================================================
+6. IMPORTANT EVIDENCE NOTE
+============================================================
+
+The source report preserves the ACL commands shown above and describes the
+firewall and SSH implementation in detail.
+
+However, the report does not preserve a complete ASA running configuration or
+the full CLI command sequence used to configure SSH.
+
+For that reason, this repository does not invent missing Cisco commands or
+present reconstructed configuration as original evidence.
+
+The preserved material is intentionally separated into:
+
+- Exact documented commands
+- Documented implementation behavior
+- Documented validation procedures
