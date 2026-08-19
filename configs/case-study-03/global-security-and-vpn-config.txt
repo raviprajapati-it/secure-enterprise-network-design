@@ -1,0 +1,344 @@
+CASE STUDY 3 — GLOBAL ENTERPRISE SECURITY & VPN CONFIGURATION
+Cheltenham HQ + San Francisco + Dubai + Vancouver
+
+This file preserves the key Cisco configuration examples documented in the
+original CT6034 global enterprise network-design project.
+
+The source contains a mixture of full configuration examples and abbreviated
+branch templates. Commands are preserved where explicitly documented.
+
+============================================================
+1. HQ ROUTER — INTERFACES & ROUTING
+============================================================
+
+hostname HQ-R
+
+interface Fa0/0
+ ip address 192.168.0.1 255.255.255.0
+ no shutdown
+
+interface Se0/3/1
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+
+ip route 192.168.1.0 255.255.255.0 10.0.0.2
+ip route 192.168.2.0 255.255.255.0 10.0.0.6
+ip route 192.168.3.0 255.255.255.0 10.0.0.10
+
+router ospf 1
+ network 192.168.0.0 0.0.0.255 area 0
+
+============================================================
+2. HQ ASA FIREWALL
+============================================================
+
+hostname HQ-ASA
+
+interface Et0/0
+ nameif inside
+ security-level 100
+ ip address 192.168.0.2 255.255.255.0
+
+interface Et0/1
+ nameif outside
+ security-level 0
+ ip address 10.0.0.2 255.255.255.252
+
+nat (inside,outside) source dynamic any interface
+
+access-list OUTSIDE_IN extended permit tcp any host 192.168.40.10 eq 80
+
+access-group OUTSIDE_IN in interface outside
+
+============================================================
+3. HQ MULTILAYER SWITCH
+============================================================
+
+hostname HQ-L3
+
+interface vlan10
+ ip address 192.168.10.1 255.255.255.0
+
+interface vlan20
+ ip address 192.168.20.1 255.255.255.0
+
+interface vlan30
+ ip address 192.168.30.1 255.255.255.0
+
+interface vlan40
+ ip address 192.168.40.1 255.255.255.0
+
+ip routing
+
+interface Fa0/1
+ switchport mode access
+ switchport access vlan 10
+
+interface Fa0/2
+ switchport mode access
+ switchport access vlan 20
+
+interface Fa0/3
+ switchport mode access
+ switchport access vlan 30
+
+interface Fa0/4
+ switchport mode access
+ switchport access vlan 40
+
+interface Fa0/5
+ switchport mode trunk
+
+============================================================
+4. VLAN DEFINITIONS
+============================================================
+
+vlan 10
+ name Admin
+
+vlan 20
+ name Sales
+
+vlan 30
+ name HR
+
+vlan 40
+ name DMZ
+
+============================================================
+5. VLAN ACCESS PORTS & TRUNK
+============================================================
+
+interface Fa0/1
+ switchport mode access
+ switchport access vlan 10
+
+interface Fa0/2
+ switchport mode access
+ switchport access vlan 20
+
+interface Fa0/3
+ switchport mode access
+ switchport access vlan 30
+
+interface Fa0/4
+ switchport mode access
+ switchport access vlan 40
+
+interface Fa0/5
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40
+
+============================================================
+6. HQ ASA ACL EXAMPLES
+============================================================
+
+access-list OUTSIDE_IN extended permit tcp any host 192.168.40.10 eq 80
+
+access-list OUTSIDE_IN extended permit tcp any host 192.168.40.11 eq 443
+
+access-list INSIDE_OUT extended permit ip any any
+
+access-group OUTSIDE_IN in interface outside
+
+access-group INSIDE_OUT in interface inside
+
+============================================================
+7. SAN FRANCISCO BRANCH ACL EXAMPLES
+============================================================
+
+access-list SF-IN extended permit ip 192.168.0.0 255.255.255.0 192.168.11.0 255.255.255.0
+
+access-list SF-OUT extended permit ip 192.168.11.0 255.255.255.0 192.168.0.0 255.255.255.0
+
+access-group SF-IN in interface outside
+
+access-group SF-OUT in interface inside
+
+============================================================
+8. SITE-TO-SITE IPSEC VPN — HQ TO SAN FRANCISCO
+============================================================
+
+crypto isakmp policy 10
+ encr aes
+ hash sha
+ authentication pre-share
+ group 2
+
+!
+! The original academic configuration contained a plaintext lab pre-shared
+! key. It is intentionally redacted from this public portfolio repository.
+!
+
+crypto isakmp key <REDACTED_LAB_PSK> address 10.0.0.2
+
+crypto ipsec transform-set TS esp-aes esp-sha-hmac
+
+crypto map VPN-MAP 10 ipsec-isakmp
+ set peer 10.0.0.2
+ set transform-set TS
+ match address 101
+
+interface Se0/3/1
+ crypto map VPN-MAP
+
+============================================================
+9. VPN INTERESTING-TRAFFIC ACL
+============================================================
+
+access-list 101 permit ip 192.168.0.0 0.0.0.255 192.168.11.0 0.0.0.255
+
+============================================================
+10. DOCUMENTED VPN DESIGN
+============================================================
+
+The original design applies the same site-to-site IPsec architecture to:
+
+HQ <-> San Francisco
+HQ <-> Dubai
+HQ <-> Vancouver
+
+The documented security components include:
+
+- IKE / ISAKMP policy
+- AES encryption
+- SHA integrity hashing
+- Pre-shared authentication
+- Diffie-Hellman group 2
+- IPsec transform sets
+- Crypto maps
+- Peer configuration
+- Interesting-traffic ACLs
+
+Conceptually:
+
+San Francisco -------- IPsec --------\
+                                      \
+Dubai ---------------- IPsec ---------- Cheltenham HQ
+                                      /
+Vancouver ------------ IPsec --------/
+
+============================================================
+11. NETWORK SEGMENTATION
+============================================================
+
+The global design separates departmental and server traffic using:
+
+VLAN 10 — Admin
+VLAN 20 — Sales
+VLAN 30 — HR
+VLAN 40 — DMZ
+
+Example HQ networks:
+
+192.168.10.0/24 — Admin
+192.168.20.0/24 — Sales
+192.168.30.0/24 — HR
+192.168.40.0/24 — DMZ
+
+Example San Francisco networks:
+
+192.168.11.0/24 — Admin
+192.168.12.0/24 — Sales
+192.168.13.0/24 — HR
+192.168.14.0/24 — DMZ
+
+Example Dubai networks:
+
+192.168.21.0/24 — Admin
+192.168.22.0/24 — Sales
+192.168.23.0/24 — HR
+192.168.24.0/24 — DMZ
+
+Example Vancouver networks:
+
+192.168.31.0/24 — Admin
+192.168.32.0/24 — Sales
+192.168.33.0/24 — HR
+192.168.34.0/24 — DMZ
+
+============================================================
+12. POINT-TO-POINT WAN ADDRESSING
+============================================================
+
+The design uses /30 networks for point-to-point links.
+
+Documented examples:
+
+HQ <-> San Francisco
+10.0.0.0/30
+
+HQ <-> Dubai
+10.0.0.4/30
+
+HQ <-> Vancouver
+10.0.0.8/30
+
+The /30 design provides two usable addresses per router-to-router link while
+keeping WAN addressing predictable and compact.
+
+============================================================
+13. SECURITY ARCHITECTURE
+============================================================
+
+The global network follows a layered security model combining:
+
+- Departmental VLAN segmentation
+- Inter-VLAN routing
+- Cisco ASA security levels
+- ACL enforcement
+- NAT
+- DMZ separation
+- Site-to-site IPsec VPN
+- Port security
+- Trunk restrictions
+- Secure inter-branch communication
+
+The firewall architecture separates:
+
+PRIVATE
+Internal departmental networks
+
+PUBLIC
+External or untrusted connectivity
+
+DMZ
+Public-facing enterprise services
+
+============================================================
+14. IMPORTANT CONFIGURATION NOTE
+============================================================
+
+These commands are preserved from an academic Cisco network-design project.
+
+The source documentation contains some addressing and configuration
+inconsistencies across diagrams, tables, and configuration examples.
+
+This repository intentionally does not silently rewrite those original design
+decisions.
+
+Instead, the portfolio separates:
+
+1. Original documented configuration
+2. Architecture interpretation
+3. Technical review and improvement recommendations
+
+This allows the original implementation evidence to remain traceable while
+still supporting professional technical analysis.
+
+============================================================
+15. SECURITY NOTE
+============================================================
+
+No production credentials or secrets are included in this repository.
+
+The original project used a simple plaintext lab pre-shared key in its example
+IPsec configuration.
+
+That value has been intentionally replaced with:
+
+<REDACTED_LAB_PSK>
+
+A real deployment should use appropriately generated secrets or certificate-
+based authentication and should never store reusable plaintext credentials in
+a public repository.
